@@ -1,0 +1,57 @@
+services:
+  weather:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    user: root
+    ports:
+      - 127.0.0.1:8080:8080
+    environment:
+      - DOTNET_DiagnosticPorts=/diag/dotnet-monitor.sock
+      - OTEL_EXPORTER_OTLP_METRICS_ENDPOINT=http://prometheus:9090/api/v1/otlp/v1/metrics
+#      - OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://127.0.0.1:1234
+#      - OTEL_EXPORTER_OTLP_LOGS_ENDPOINT=http://127.0.0.1:2345
+      - OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+      - OTEL_LOGS_EXPORTER=none
+      - OTEL_TRACES_EXPORTER=none
+    volumes:
+      - dotnet-monitor-data:/diag
+    depends_on:
+      - dotnetmonitor
+      - prometheus
+
+  dotnetmonitor:
+    image: mcr.microsoft.com/dotnet/monitor:10.0.0
+    user: root
+    ports:
+      - 127.0.0.1:52323:52323
+      - 127.0.0.1:52325:52325
+    environment:
+      - DOTNETMONITOR_DiagnosticPort__ConnectionMode=Listen
+      - DOTNETMONITOR_Storage__DefaultSharedPath=/diag
+      - DOTNETMONITOR_Urls=http://+:52323
+      - DOTNETMONITOR_Metrics__Endpoints=http://+:52325
+      - DotnetMonitor_InProcessFeatures__Enabled=true
+      - DotnetMonitor_InProcessFeatures__CallStacks__Enabled=true
+      - DotnetMonitor_InProcessFeatures__Exceptions__Enabled=true
+    volumes:
+      - dotnet-monitor-data:/diag
+    command:
+      - collect
+      - --no-auth
+
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=1y
+      - --storage.tsdb.retention.size=1GB
+      - --web.enable-otlp-receiver
+    volumes:
+      - prometheus-data:/prometheus
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+
+volumes:
+  dotnet-monitor-data:
+  prometheus-data:
