@@ -1,18 +1,17 @@
-using OpenTelemetry;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services
        .AddOpenTelemetry()
-       .UseOtlpExporter()
        .ConfigureResource(c => c.AddService("weather-forecast-service"))
        .WithMetrics(metrics =>
        {
            metrics
                .AddAspNetCoreInstrumentation()
                .AddProcessInstrumentation()
-               .AddRuntimeInstrumentation();
+               .AddRuntimeInstrumentation()
+               .AddOtlpExporter();
        });
 
 var app = builder.Build();
