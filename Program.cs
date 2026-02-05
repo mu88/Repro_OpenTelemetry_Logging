@@ -1,19 +1,11 @@
-using OpenTelemetry;
-using OpenTelemetry.Metrics;
-using OpenTelemetry.Resources;
+using System;
+using System.Linq;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.Logging;
+using mu88.Shared.OpenTelemetry;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Services
-       .AddOpenTelemetry()
-       .UseOtlpExporter()
-       .ConfigureResource(c => c.AddService("weather-forecast-service"))
-       .WithMetrics(metrics =>
-       {
-           metrics
-               .AddAspNetCoreInstrumentation()
-               .AddProcessInstrumentation()
-               .AddRuntimeInstrumentation();
-       });
+builder.ConfigureOpenTelemetry("weather-forecast-service");
 
 var app = builder.Build();
 
@@ -25,7 +17,7 @@ var summaries = new[]
 app.MapGet("/weatherforecast", (ILogger<Program> logger) =>
 {
     logger.LogInformation("Generating weather forecast");
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
+    var forecast = Enumerable.Range(1, 5).Select(index =>
         new WeatherForecast
         (
             DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
