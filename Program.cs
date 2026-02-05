@@ -1,18 +1,32 @@
+using System;
+using System.Linq;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using OpenTelemetry;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Logging
+    .AddOpenTelemetry(logging =>
+    {
+        logging.IncludeFormattedMessage = true;
+        logging.IncludeScopes = true;
+    });
 builder.Services
-       .AddOpenTelemetry()
-       .ConfigureResource(c => c.AddService("weather-forecast-service"))
-       .WithMetrics(metrics =>
-       {
-           metrics
-               .AddAspNetCoreInstrumentation()
-               .AddProcessInstrumentation()
-               .AddRuntimeInstrumentation()
-               .AddOtlpExporter();
-       });
+    .AddOpenTelemetry()
+    .ConfigureResource(c => c.AddService("weather-forecast-service"))
+    .WithMetrics(metrics =>
+    {
+        metrics
+            .AddAspNetCoreInstrumentation()
+            .AddProcessInstrumentation()
+            .AddRuntimeInstrumentation();
+    })
+    .WithTracing(tracing => tracing.AddAspNetCoreInstrumentation())
+    .UseOtlpExporter();
 
 var app = builder.Build();
 
